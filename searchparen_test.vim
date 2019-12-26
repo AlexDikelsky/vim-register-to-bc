@@ -1,27 +1,20 @@
 function! s:find_match_from_end(str, start_paren_index)
     let l:found_right = 1 
-    let l:i = a:start_paren_index -1
+    let l:i = a:start_paren_index 
 
     while l:found_right !=# 0 && l:i >= 0
+	let l:i -= 1
 	if a:str[l:i] ==# ')'
 	    let l:found_right += 1
 	endif
 	if a:str[l:i] ==# '('
 	    let l:found_right -= 1
 	endif
-	
-	let l:i -= 1
     endwhile
-    return l:i + 1
+    return l:i
 endfunction
 
-let a = "a()bcd(fasf)"
-let n = 2
-
-"this will be weird when the parens are stuff like 
-"   3)(^3
-
-echo s:find_match_from_end(a, match(a, ')', 0, n)) . "should be" . match(a, '(', 0, n)
-
-
-
+"let a = "a()bcd(fa()s()f)"
+"	"0123456789012345
+"
+"echo s:find_match_from_end(a, 15)
