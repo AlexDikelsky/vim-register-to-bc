@@ -3,17 +3,18 @@
 command! -nargs=+ Calculate echo "<args> = " . Calculate ("<args>")
 
 "" calculate expression from visual selection
-vnoremap <leader>bc "ey:call CalcLines(1)<cr>
+vnoremap <leader>ca "ey:call CalcLines(1)<cr>
 
 "" calculate expression in the current unnamed register
-noremap  <leader>bc "eyy:call CalcLines(0)<cr>
+noremap  <leader>ca "eyy:call CalcLines(0)<cr>
 
 " ---------------------------------------------------------------------
 "  Calculate:
 "    clean up an expression, pass it to bc, return answer
-function! Calculate (s)
+function! Calculate (input_str)
 
-	let l:str= a:s
+	let l:str= a:input_str
+
 
 	" remove newlines
 	let l:str= substitute (l:str, "[\n|;]", "|", "g")
@@ -24,42 +25,10 @@ function! Calculate (s)
 	" Only allow these commands. I'm doing this
 	" so if you accidently type ca on a dangerous line
 	" it won't do anything dangerous
-	
-	let l:legal_commands = [
-		    \ "abs("
-		    \ "acos("
-		    \ "asin("
-		    \ "atan("
-		    \ "atan2("
-		    \ "ceil("
-		    \ "cos("
-		    \ "cosh("
-		    \ "exp("
-		    \ "floor("
-		    \ "fmod("
-		    \ "log("
-		    \ "log10("
-		    \ "max("
-		    \ "min("
-		    \ "pow("
-		    \ "round("
-		    \ "sin("
-		    \ "sinh("
-		    \ "sqrt("
-		    \ "tan("
-		    \ "tanh(" ]
-
-	for l:fun_name in l:legal_commands
-	    let l:str = substitute(l:str, l:fun_name, "", "g")
-	endfor
-	
-	
-
-
-
+	let l:str = s:delete_illegal_functions(l:str)
 
 	" Substitute superscript characters like ² to become ^(²)
-	    "First put them in parenthesis
+	    "First put them in parenthesis and add a carrot
 	    let l:str = substitute(l:str, "[⁰¹²³⁴⁵⁶⁷⁸⁹]\\+", "^(&)", "g")
 	
 	    "This changes all numbers like ² to 2
@@ -67,6 +36,9 @@ function! Calculate (s)
 	    "Next it maps 2 to ², and so on for all the numbers
 	    "Finally it joins all of the returned characters
 	    let l:str = join(map(split(l:str, '\zs'), 'FromSuperToNormal(v:val)'), "")
+
+	    "next remove the ^ and change it to pow(base, exponent)
+	    let l:str = 
 
 	" escape chars for shell
 	let l:str = escape (l:str, '*();&><|')
@@ -110,7 +82,7 @@ endfunction "}}}
 "
 " take expression from lines, either visually selected or the current line, as
 " passed determined by arg vsl
-function! CalcLines(vsl)
+function! CalcLines()
 
 	" replace newlines with semicolons and remove trailing spaces
 	let @e = substitute (@e, "\n", ";", "g")
@@ -122,4 +94,83 @@ function! CalcLines(vsl)
 	echo "answer = " . l:answer
 	call setreg('"', l:answer)
 endfunction
+
+function! s:delete_illegal_functions(str)   
+    "Takes string, then returns a list with illegal commands removed
+    "This can run into problems if the string starts with an illegal command,
+    "or the command is one letter because vim slice expressions can be weird.
+    "legal commands{{{
+    let l:legal_commands = [ 
+     	\ "abs",
+     	\ "acos",
+     	\ "asin",
+     	\ "atan",
+     	\ "atan2",
+     	\ "ceil",
+     	\ "cos",
+     	\ "cosh",
+     	\ "exp",
+     	\ "floor",
+     	\ "fmod",
+     	\ "log",
+     	\ "log10",
+     	\ "max",
+     	\ "min",
+     	\ "pow",
+     	\ "round",
+     	\ "sin",
+     	\ "sinh",
+     	\ "sqrt",
+     	\ "tan",
+     	\ "tanh",
+        \ ] 
+    "}}}
+    let l:i = 0
+    let l:re  = '\zs[a-zA-Z0-9]\+\ze\s*('
+
+    let l:final_str = ""
+    let l:writable = a:str
+
+    let l:start = match(a:str, a:regex, l:i)
+    let l:end = matchend(a:str, a:regex, l:i)
+    let l:length = len(a:str)
+    while (l:i < l:length) && (l:start !=# -1)
+        if index(l:legal_commands, l:writable[l:start : l:end -1]) ==# -1
+	    "If there is a function, but it's not a legal command, remove it
+	    "from the string
+	    echo "unrecognized function, recheck input line"
+            let l:writable = l:writable[ : s:if_neg_be_zero(l:start -1)] . l:writable[l:end:]
+	    
+	    "This will leave a single character if you have a range like [0:0]
+	    "but you probably didn't mean to execute that command anyway, and 
+	    "hopefully you don't have particularly dangerous single letter
+	    "commands
+
+	    "Move the start position to the end, then fix the index
+	    let l:i = l:end 
+            let l:i -= abs(l:length - len(l:writable))
+            let l:length = len(l:writable)
+	else
+	    "don't delete the thing and continue to the next word
+	    let l:i = l:end
+        endif
+            
+	"get new values. Theres probably a great way to do this with recursion
+        let l:length = len(l:writable)
+        let l:start = match(l:writable, a:regex, l:i)
+        let l:end = matchend(l:writable, a:regex, l:i)
+    endwhile
+    return l:writable
+endfunction
+
+function! s:if_neg_be_zero(x)
+    "This is defined because if you take a range that
+    "starts with -1, it startes at the wrong index
+    if a:x < 0 
+	return 0
+    else
+	return a:x
+    endif
+endfunction
+
 
