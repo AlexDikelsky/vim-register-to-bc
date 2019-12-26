@@ -1,11 +1,11 @@
-"let str = "echo 'words'\necho 'abc'"
-"let str = substitute (str, "[\n|;]", "|", "g")
+""let str = "echo 'words'\necho 'abc'"
+"matchaddpos
+""let str = substitute (str, "[\n|;]", "|", "g")
+""
+""execute(str)
 "
-"execute(str)
-
 ""Replace all things that are like some_fun_not_in_this_list(  {{{
 ""Hopefully this prevents accidental execution of dangerous code
-"
 "    "First idea
 ""Count the open parens in the expression
 ""for each paren: 
@@ -38,69 +38,71 @@
 "
 ""let b = match(a, "a")
 ""let c = matchend(a, "c") - 1
-"function! s:get_matches(str, regex)  
-"    "legal commands{{{
-"    let l:legal_commands = [ 
-"     	\ "abs",
-"     	\ "acos",
-"     	\ "asin",
-"     	\ "atan",
-"     	\ "atan2",
-"     	\ "ceil",
-"     	\ "cos",
-"     	\ "cosh",
-"     	\ "exp",
-"     	\ "floor",
-"     	\ "fmod",
-"     	\ "log",
-"     	\ "log10",
-"     	\ "max",
-"     	\ "min",
-"     	\ "pow",
-"     	\ "round",
-"     	\ "sin",
-"     	\ "sinh",
-"     	\ "sqrt",
-"     	\ "tan",
-"     	\ "tanh",
-"        \ ] 
-"    "}}}
-"    let l:i = 0
-"
-"    let l:final_str = ""
-"    let l:writable = a:str
-"
-"    let l:start = match(a:str, a:regex, l:i)
-"    let l:end = matchend(a:str, a:regex, l:i)
-"    let l:length = len(a:str)
-"    while (l:i < l:length) && (l:start !=# -1)
-"        if index(l:legal_commands, l:writable[l:start : l:end -1]) ==# -1
-"	    "If there is a function, but it's not a legal command, remove it
-"	    "from the string
-"	    echo "unrecognized function, recheck input line"
-"            let l:writable = l:writable[ : s:if_neg_be_zero(l:start -1)] . l:writable[l:end:]
-"	    
-"	    "This will leave a single character if you have a range like [0:0]
-"	    "but you probably didn't mean to execute that command anyway, and 
-"	    "hopefully you don't have particularly dangerous single letter
-"	    "commands
-"
-"	    "Move the start position to the end, then fix the index
-"	    let l:i = l:end 
-"            let l:i -= abs(l:length - len(l:writable))
-"            let l:length = len(l:writable)
-"	else
-"	    "don't delete the thing and continue to the next word
-"	    let l:i = l:end
-"        endif
-"            
-"	"get new values. Theres probably a great way to do this with recursion
-"        let l:length = len(l:writable)
-"        let l:start = match(l:writable, a:regex, l:i)
-"        let l:end = matchend(l:writable, a:regex, l:i)
-"    endwhile
-"    return l:writable
-"endfunction
+""function! s:get_matches(str, regex)  
+""    let l:i = 0
+""
+""    let l:writable = a:str
+""    let l:start_locations = []
+""
+""    "legal commands{{{
+""    let l:legal_commands = [ 
+""     	\ "abs",
+""     	\ "acos",
+""     	\ "asin",
+""     	\ "atan",
+""     	\ "atan2",
+""     	\ "ceil",
+""     	\ "cos",
+""     	\ "cosh",
+""     	\ "exp",
+""     	\ "floor",
+""     	\ "fmod",
+""     	\ "log",
+""     	\ "log10",
+""     	\ "max",
+""     	\ "min",
+""     	\ "pow",
+""     	\ "round",
+""     	\ "sin",
+""     	\ "sinh",
+""     	\ "sqrt",
+""     	\ "tan",
+""     	\ "tanh",
+""        \ ] 
+""    "}}}
+""    let l:start = match(a:str, a:regex, l:i)
+""    let l:end = matchend(a:str, a:regex, l:i)
+""    let l:length = len(a:str)
+""    while (l:i < l:length) && (l:start !=# -1)
+""        if index(l:legal_commands, l:writable[l:start : l:end -1]) ==# -1
+""	    "If there is a function, but it's not a legal command, remove it
+""	    "from the string
+""	    echo "unrecognized function, recheck input line"
+""            let l:writable = l:writable[ : s:if_neg_be_zero(l:start -1)] . l:writable[l:end:]
+""	    
+""	    "This will leave a single character if you have a range like [0:0]
+""	    "but you probably didn't mean to execute that command anyway, and 
+""	    "hopefully you don't have particularly dangerous single letter
+""	    "commands
+""
+""	    "Move the start position to the end, then fix the index
+""	    let l:i = l:end 
+""            let l:i -= abs(l:length - len(l:writable))
+""            let l:length = len(l:writable)
+""	else
+""	    "echo l:i . "<i s>" . l:start . "e>" l:end
+""	    call add(l:start_locations, l:start)
+""	    "don't delete the thing and continue to the next word
+""	    let l:i = l:end
+""        endif
+""            
+""	"get new values. Theres probably a great way to do this with recursion
+""        let l:length = len(l:writable)
+""        let l:start = match(l:writable, a:regex, l:i)
+""        let l:end = matchend(l:writable, a:regex, l:i)
+""    endwhile
+""    return [l:writable, l:start_locations]
+""endfunction
 "
 "function! s:if_neg_be_zero(x)
 "    "This is defined because if you take a range that
@@ -116,26 +118,97 @@
 ""Not sure if 0-9 should be in this, because 9(3) is then recognized as a
 ""function that is illegal.
 ""
-""let b:testlist = [
-""	    \"asdf(3) + cos(x)",
-""	    \"3 + 4",
-""	    \"cos(2)",
-""	    \"log10 (3)",
-""	    \"sgsd4 (3)",
-""	    \"3(4)"
-""	    \]
+"let b:testlist = [
+"	    \"cos(x) + cos(x)",
+"	    \"asdf(3) + cos(x)",
+"	    \"3 + 4",
+"	    \"3 + log(x)",
+"	    \"cos(2)",
+"	    \"log10 (3)",
+"	    \"sgsd4 (3)",
+"	    \"3(4)"
+"	    \]
 "
-""for b:x in b:testlist
-""    echo s:get_matches(b:x, b:re)
-""endfor
+"for b:x in b:testlist
+"    echo s:get_matches(b:x, b:re)
+"endfor
 "
 ""3 + asdf(3) + cos(x)
 ""asdf(3) + cos(x)
+"
+"
+""function! s:switch_to_pow(str)
+""    let l:result = ""
+""    let l:i = ""
+""    while l:i < count(a:str, "\^")
+""	
+""endfunction
+""
+""
+""
+""
+""
+""
+""
+""
+""
+function! s:get_matches(str, regex)  
+    let l:i = 0
 
+    let l:writable = a:str
+    let l:start_locations = []
 
-function! s:switch_to_pow(str)
-    let l:result = ""
-    let l:i = ""
-    while l:i < count(a:str, "\^")
-	
+    let l:start = match(a:str, a:regex, l:i)
+    let l:end = matchend(a:str, a:regex, l:i)
+    let l:length = len(a:str)
+    while (l:i < l:length) && (l:start !=# -1)
+	"echo l:i . "<i s>" . l:start . "e>" l:end
+	call add(l:start_locations, l:start)
+	"don't delete the thing and continue to the next word
+	let l:i = l:end
+            
+	"get new values. Theres probably a great way to do this with recursion
+        let l:length = len(l:writable)
+        let l:start = match(l:writable, a:regex, l:i)
+        let l:end = matchend(l:writable, a:regex, l:i)
+    endwhile
+    return l:start_locations
 endfunction
+
+"function! s:to_pow(str, carot_loc)
+"    let l:i = a:carot_loc
+"    while str[l:i] ==# '\s'
+"	let l:i -= 1
+"    endwhile
+"
+"    if str[l:i] ==# ')'
+"	searchpair('(', '', ')', "bW")
+"
+"
+
+
+    
+
+
+
+"Find if theres a paren before the ^. If there is, use matchparen
+
+"function! s:rec(str, regex, list, start, end)
+"    if a:start == -1 && a:str !=# ""
+"	return a:list
+"    else
+"	echo a:str
+"	return s:rec(
+"		    \ a:str[a:start:],
+"		    \ a:regex,
+"		    \ add(a:list, a:start),
+"		    \ match(a:str, a:regex, a:start),
+"		    \ matchend(a:str, a:regex, a:start)
+"		    \ )
+"    endif
+"endfunction
+"
+"function! s:caller(str, regex)
+"    call s:rec(a:str, a:regex, [], match(a:str, a:regex, 0), matchend(a:str, a:regex, 0))
+"endfunction
+"echo s:caller("s__abc___abc__e", "abc")

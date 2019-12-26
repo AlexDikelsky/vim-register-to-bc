@@ -30,6 +30,7 @@ function! Calculate (input_str)
 	" Substitute superscript characters like ² to become ^(²)
 	    "First put them in parenthesis and add a carrot
 	    let l:str = substitute(l:str, "[⁰¹²³⁴⁵⁶⁷⁸⁹]\\+", "^(&)", "g")
+
 	
 	    "This changes all numbers like ² to 2
 	    "First, it changes the string to a list of characters
@@ -95,7 +96,7 @@ function! CalcLines()
 	call setreg('"', l:answer)
 endfunction
 
-function! s:delete_illegal_functions(str)   
+function! s:delete_illegal_functions(str)    "{{{
     "Takes string, then returns a list with illegal commands removed
     "This can run into problems if the string starts with an illegal command,
     "or the command is one letter because vim slice expressions can be weird.
@@ -161,7 +162,7 @@ function! s:delete_illegal_functions(str)
         let l:end = matchend(l:writable, a:regex, l:i)
     endwhile
     return l:writable
-endfunction
+endfunction "}}}
 
 function! s:if_neg_be_zero(x)
     "This is defined because if you take a range that
@@ -171,6 +172,23 @@ function! s:if_neg_be_zero(x)
     else
 	return a:x
     endif
+endfunction
+
+function! s:find_match_from_end(str, start_paren_index)
+    let l:found_right = 1 
+    let l:i = a:start_paren_index -1
+
+    while l:found_right !=# 0 && l:i >= 0
+	if a:str[l:i] ==# ')'
+	    let l:found_right += 1
+	endif
+	if a:str[l:i] ==# '('
+	    let l:found_right -= 1
+	endif
+	
+	let l:i -= 1
+    endwhile
+    return l:i + 1
 endfunction
 
 
